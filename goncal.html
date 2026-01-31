@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>紫微斗數排盤系統 - 自動定位</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lunar-javascript/1.7.4/lunar.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .input-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        /* 命盤介面 */
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            width: 500px; height: 500px;
+            background: #fffaf0; border: 2px solid #8b4513;
+        }
+        .cell {
+            border: 1px solid #d2b48c; position: relative;
+            padding: 5px; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .center-space { 
+            grid-column: 2 / 4; grid-row: 2 / 4; 
+            background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 0.9em;
+        }
+        .cell-id { color: #999; font-size: 12px; text-align: right; }
+        .palace-name { color: #b22222; font-weight: bold; text-align: center; font-size: 1.2em; }
+        .active-palace { background-color: #fffacd; border: 2px solid #ff4500 !important; } /* 命宮高亮 */
+    </style>
+</head>
+<body>
+
+<div class="input-section">
+    <input type="text" id="userName" placeholder="姓名" style="width: 80px;">
+    <input type="date" id="birthDate" value="1990-01-01">
+    <select id="birthTime">
+        <option value="0">子(23-01)</option><option value="1">丑(01-03)</option>
+        <option value="2">寅(03-05)</option><option value="3">卯(05-07)</option>
+        <option value="4">辰(07-09)</option><option value="5">巳(09-11)</option>
+        <option value="6">午(11-13)</option><option value="7">未(13-15)</option>
+        <option value="8">申(15-17)</option><option value="9">酉(17-19)</option>
+        <option value="10">戌(19-21)</option><option value="11">亥(21-23)</option>
+    </select>
+    <button onclick="updateChart()">排盤</button>
+</div>
+
+<div class="chart-container" id="chart">
+    <div class="cell" id="cell-5"> <div class="cell-id">巳</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-6"> <div class="cell-id">午</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-7"> <div class="cell-id">未</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-8"> <div class="cell-id">申</div><div class="palace-name"></div> </div>
+    
+    <div class="cell" id="cell-4" style="grid-area: 2/1"> <div class="cell-id">辰</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-9" style="grid-area: 2/4"> <div class="cell-id">酉</div><div class="palace-name"></div> </div>
+    
+    <div class="cell" id="cell-3" style="grid-area: 3/1"> <div class="cell-id">卯</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-10" style="grid-area: 3/4"> <div class="cell-id">戌</div><div class="palace-name"></div> </div>
+    
+    <div class="cell" id="cell-2" style="grid-area: 4/1"> <div class="cell-id">寅</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-1" style="grid-area: 4/2"> <div class="cell-id">丑</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-0" style="grid-area: 4/3"> <div class="cell-id">子</div><div class="palace-name"></div> </div>
+    <div class="cell" id="cell-11" style="grid-area: 4/4"> <div class="cell-id">亥</div><div class="palace-name"></div> </div>
+
+    <div class="center-space" id="info">
+        請輸入資料並點擊排盤
+    </div>
+</div>
+
+<script>
+    // 地支索引：子=0, 丑=1, 寅=2...
+    const dzNames = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+    const palaceNames = ["命宮", "兄弟", "夫妻", "子女", "財帛", "疾厄", "遷移", "奴僕", "官祿", "田宅", "福德", "父母"];
+
+    function updateChart() {
+        const dateVal = document.getElementById('birthDate').value;
+        const timeIndex = parseInt(document.getElementById('birthTime').value);
+        if(!dateVal) return;
+
+        const solar = Solar.fromDate(new Date(dateVal));
+        const lunar = solar.getLunar();
+        const month = lunar.getMonth(); // 農曆月份
+        
+        // 1. 計算命宮位置 (公式：寅(2) + 月份 - 1 - 時辰索引)
+        // JavaScript 的 % 處理負數較麻煩，需加 12 確保為正
+        let lifeIndex = (2 + (month - 1) - timeIndex + 12) % 12;
+
+        // 2. 清除舊樣式
+        document.querySelectorAll('.cell').forEach(c => {
+            c.classList.remove('active-palace');
+            c.querySelector('.palace-name').innerText = '';
+        });
+
+        // 3. 順推十二宮並顯示
+        for (let i = 0; i < 12; i++) {
+            let currentCellIndex = (lifeIndex + i) % 12;
+            let targetCell = document.getElementById(`cell-${currentCellIndex}`);
+            targetCell.querySelector('.palace-name').innerText = palaceNames[i];
+            if(i === 0) targetCell.classList.add('active-palace');
+        }
+
+        // 4. 更新中宮資訊
+        document.getElementById('info').innerHTML = `
+            <strong>${document.getElementById('userName').value}</strong><br>
+            農曆：${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}<br>
+            八字：${lunar.getEightChar().getYear()}年<br>
+            命宮在：${dzNames[lifeIndex]}
+        `;
+    }
+</script>
+</body>
+</html>
