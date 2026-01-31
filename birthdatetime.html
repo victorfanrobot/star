@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紫微斗數 - 輸入出生資料</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lunar-javascript/1.7.4/lunar.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #f4f4f4; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .input-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #8b4513; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #5d2e0d; }
+        
+        .result-card { margin-top: 20px; background: #fffaf0; padding: 20px; border-radius: 12px; border: 2px solid #8b4513; width: 100%; max-width: 400px; display: none; }
+        .result-item { margin-bottom: 10px; font-size: 1.1em; }
+        .highlight { color: #b22222; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="input-card">
+    <h2 style="text-align: center; color: #8b4513;">出生資料輸入</h2>
+    <div class="input-group">
+        <label>姓名</label>
+        <input type="text" id="userName" placeholder="請輸入姓名" value="王小明">
+    </div>
+    <div class="input-group">
+        <label>西元出生日期</label>
+        <input type="date" id="birthDate" value="1990-01-01">
+    </div>
+    <div class="input-group">
+        <label>出生時辰</label>
+        <select id="birthTime">
+            <option value="0">23:00-00:59 (子時)</option>
+            <option value="2">01:00-02:59 (丑時)</option>
+            <option value="4">03:00-04:59 (寅時)</option>
+            <option value="6">05:00-06:59 (卯時)</option>
+            <option value="8">07:00-08:59 (辰時)</option>
+            <option value="10">09:00-10:59 (巳時)</option>
+            <option value="12">11:00-12:59 (午時)</option>
+            <option value="14">13:00-14:59 (未時)</option>
+            <option value="16">15:00-16:59 (申時)</option>
+            <option value="18">17:00-18:59 (酉時)</option>
+            <option value="20">19:00-20:59 (戌時)</option>
+            <option value="22">21:00-22:59 (亥時)</option>
+        </select>
+    </div>
+    <button onclick="convertDate()">換算農曆並排盤</button>
+</div>
+
+<div class="result-card" id="resultCard">
+    <h3 style="text-align: center;">換算結果</h3>
+    <div class="result-item">姓名：<span id="resName" class="highlight"></span></div>
+    <div class="result-item">西元生日：<span id="resSolar"></span></div>
+    <div class="result-item">農曆生日：<span id="resLunar" class="highlight"></span></div>
+    <div class="result-item">生肖：<span id="resAnimal"></span></div>
+    <div class="result-item">八字干支：<span id="resBaZi" class="highlight"></span></div>
+</div>
+
+<script>
+    function convertDate() {
+        const name = document.getElementById('userName').value;
+        const dateStr = document.getElementById('birthDate').value; // YYYY-MM-DD
+        const hour = parseInt(document.getElementById('birthTime').value);
+
+        if (!dateStr) {
+            alert("請選擇出生日期");
+            return;
+        }
+
+        // 解析日期
+        const parts = dateStr.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const day = parseInt(parts[2]);
+
+        // 使用 lunar-javascript 進行轉換
+        // Solar.fromYmdHms(年, 月, 日, 時, 分, 秒)
+        const solar = Solar.fromYmdHms(year, month, day, hour, 0, 0);
+        const lunar = solar.getLunar();
+
+        // 顯示結果
+        document.getElementById('resName').innerText = name;
+        document.getElementById('resSolar').innerText = `${year}年${month}月${day}日 ${hour}點`;
+        document.getElementById('resLunar').innerText = `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月 ${lunar.getDayInChinese()}`;
+        document.getElementById('resAnimal').innerText = lunar.getYearShengXiao();
+        
+        // 獲取八字 (年柱、月柱、日柱、時柱)
+        const eightChar = lunar.getEightChar();
+        document.getElementById('resBaZi').innerText = `${eightChar.getYear()} ${eightChar.getMonth()} ${eightChar.getDay()} ${eightChar.getTime()}`;
+
+        document.getElementById('resultCard').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
