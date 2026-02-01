@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紫微斗數 AI 大師版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lunar-javascript/1.7.4/lunar.js"></script>
+    <style>
+        :root {
+            --border: #5d4037; --bg: #fffbf0;
+            --main-red: #d32f2f; --main-blue: #1976d2;
+            --si-hua: #2e7d32; --assistant: #7b1fa2;
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #f4f1ea; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* 輸入面板 */
+        .input-panel { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 700px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; border-top: 5px solid var(--border); }
+        input, select, button { padding: 10px; border-radius: 6px; border: 1px solid #ddd; outline: none; }
+        button.primary-btn { background: var(--border); color: white; border: none; cursor: pointer; transition: 0.3s; }
+        button.primary-btn:hover { background: #3e2723; }
+        button.ai-btn { background: #2e7d32; color: white; border: none; cursor: pointer; width: 100%; font-size: 1.1em; margin-top: 10px; border-radius: 8px; }
+
+        /* 命盤主體 */
+        .chart {
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+            width: 95vw; height: 95vw; max-width: 700px; max-height: 700px;
+            background: var(--bg); border: 3px solid var(--border);
+        }
+        .cell { border: 0.5px solid #d2b48c; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .center { grid-column: 2 / 4; grid-row: 2 / 4; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px inset var(--border); text-align: center; font-size: 0.9em; padding: 10px; }
+
+        /* 星曜顯示 */
+        .stars-box { display: flex; flex-direction: row-reverse; height: 85%; flex-wrap: wrap-reverse; align-content: flex-start; }
+        .star { writing-mode: vertical-rl; font-weight: bold; font-size: 15px; margin-left: 3px; position: relative; line-height: 1.2; }
+        .zi-red { color: var(--main-red); }
+        .fu-blue { color: var(--main-blue); }
+        .ast-purple { color: var(--assistant); font-size: 13px; }
+        
+        .sihua { font-size: 10px; background: var(--si-hua); color: white; border-radius: 3px; padding: 1px 2px; writing-mode: horizontal-tb; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); }
+
+        .palace-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; border-top: 1px solid #eee; padding-top: 2px; }
+        .active-palace { background: #fffde7; }
+
+        /* AI 結果區 */
+        #ai-section { width: 100%; max-width: 700px; margin-top: 20px; }
+        #ai-result { background: white; padding: 20px; border-radius: 10px; margin-top: 10px; border-left: 8px solid #2e7d32; line-height: 1.8; min-height: 100px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        @media (max-width: 500px) {
+            .star { font-size: 12px; margin-left: 1px; }
+            .input-panel { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="input-panel">
+    <div>
+        <strong>姓名:</strong> <input type="text" id="name" style="width: 80px" value="訪客">
+        <strong>API Key:</strong> <input type="password" id="apiKey" placeholder="在此輸入 Gemini API Key" style="width: 150px">
+    </div>
+    <div>
+        <strong>生日:</strong> <input type="date" id="bDay" value="1990-01-01">
+        <strong>時辰:</strong>
+        <select id="bTime">
+            <option value="0">子(23-01)</option><option value="1">丑(01-03)</option>
+            <option value="2">寅(03-05)</option><option value="3">卯(05-07)</option>
+            <option value="4">辰(07-09)</option><option value="5">巳(09-11)</option>
+            <option value="6">午(11-13)</option><option value="7">未(13-15)</option>
+            <option value="8">申(15-17)</option><option value="9">酉(17-19)</option>
+            <option value="10">戌(19-21)</option><option value="11">亥(21-23)</option>
+        </select>
+        <button class="primary-btn" onclick="mainAction()">即刻排盤</button>
+    </div>
+</div>
+
+<div class="chart" id="chart">
+    <div class="cell" id="c5" style="grid-area:1/1"></div><div class="cell" id="c6" style="grid-area:1/2"></div>
+    <div class="cell" id="c7" style="grid-area:1/3"></div><div class="cell" id="c8" style="grid-area:1/4"></div>
+    <div class="cell" id="c4" style="grid-area:2/1"></div><div class="cell" id="c9" style="grid-area:2/4"></div>
+    <div class="cell" id="c3" style="grid-area:3/1"></div><div class="cell" id="c10" style="grid-area:3/4"></div>
+    <div class="cell" id="c2" style="grid-area:4/1"></div><div class="cell" id="c1" style="grid-area:4/2"></div>
+    <div class="cell" id="c0" style="grid-area:4/3"></div><div class="cell" id="c11" style="grid-area:4/4"></div>
+    <div class="center" id="mid">請輸入資料</div>
+</div>
+
+<div id="ai-section">
+    <button class="ai-btn" onclick="getAIDivination()">🔮 召喚 AI 大師深度解盤</button>
+    <div id="ai-result">排盤後點擊上方按鈕，AI 將為您解析命格...</div>
+</div>
+
+<script>
+const DZ = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const PLS = ["命宮","兄弟","夫妻","子女","財帛","疾厄","遷移","奴僕","官祿","田宅","福德","父母"];
+const SIHUA_TABLE = {
+    '甲':['廉貞','破軍','武曲','太陽'], '乙':['天機','天梁','紫微','太陰'],
+    '丙':['天同','天機','文昌','廉貞'], '丁':['太陰','天同','天機','巨門'],
+    '戊':['貪狼','太陰','右弼','天機'], '己':['武曲','貪狼','天梁','文曲'],
+    '庚':['太陽','武曲','天府','天同'], '辛':['巨門','太陽','文曲','文昌'],
+    '壬':['天梁','紫微','左輔','武曲'], '癸':['破軍','巨門','太陰','貪狼']
+};
+
+function mainAction() {
+    const solar = Solar.fromDate(new Date(document.getElementById('bDay').value));
+    const lunar = solar.getLunar();
+    const m = lunar.getMonth(), d = lunar.getDay(), t = parseInt(document.getElementById('bTime').value);
+    const gan = lunar.getYearGan();
+
+    let lifeIdx = (2 + (m - 1) - t + 12) % 12;
+    
+    for(let i=0; i<12; i++) {
+        document.getElementById('c'+i).innerHTML = '<div class="stars-box"></div><div class="palace-label"></div>';
+        document.getElementById('c'+i).className = 'cell';
+    }
+
+    for(let i=0; i<12; i++){
+        let p = (lifeIdx + i) % 12;
+        document.getElementById('c'+p).querySelector('.palace-label').innerHTML = `<span>${PLS[i]}</span><span>${DZ[p]}</span>`;
+        if(i===0) document.getElementById('c'+p).classList.add('active-palace');
+    }
+
+    // 簡化紫微定位邏輯
+    let zv = (2 + (Math.ceil(d/3)) + (d % 3)) % 12; 
+    const sh = SIHUA_TABLE[gan];
+
+    const zvS = ["紫微","天機","","太陽","武曲","天同","","","廉貞"];
+    zvS.forEach((s, i) => { if(s) addStar((zv-i+12)%12, s, 'zi-red', sh); });
+    let tf = (4 - zv + 12) % 12;
+    const tfS = ["天府","太陰","貪狼","巨門","天相","天梁","七殺","","","","","破軍"];
+    tfS.forEach((s, i) => { if(s) addStar((tf+i)%12, s, 'fu-blue', sh); });
+
+    // 輔星
+    addStar((10 - t + 12)%12, "文昌", "ast-purple", sh);
+    addStar((2 + t)%12, "文曲", "ast-purple", sh);
+
+    document.getElementById('mid').innerHTML = `<strong>${document.getElementById('name').value}</strong><br>${lunar.getYearInChinese()}年<br>${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}日<br>${gan}年四化：${sh.join('')}`;
+}
+
+function addStar(p, name, cl, sh) {
+    const box = document.getElementById('c'+p).querySelector('.stars-box');
+    const span = document.createElement('div');
+    span.className = 'star ' + cl;
+    span.innerText = name;
+    
+    const type = ["祿","權","科","忌"];
+    const idx = sh.indexOf(name);
+    if(idx !== -1) {
+        const s = document.createElement('span');
+        s.className = 'sihua';
+        s.innerText = type[idx];
+        span.appendChild(s);
+    }
+    box.appendChild(span);
+}
+
+async function getAIDivination() {
+//    const key = document.getElementById('apiKey').value;
+    const key = "AIzaSyDqjHTHTaztFlrRvlF-kpbzKOsT0e6rTgo"
+    if(!key) { alert("請先輸入 Gemini API Key"); return; }
+
+    const info = document.getElementById('mid').innerText;
+    const resultDiv = document.getElementById('ai-result');
+    resultDiv.innerHTML = "<em>正在與 AI 大師溝通中，請稍候...</em>";
+
+    const prompt = `你是一位精通紫微斗數的命理專家。
+    當前排盤資訊：${info}。
+    請根據此命盤，分析使用者的性格優點、潛在挑戰，並給予一個具體的當年開運建議。請用專業、鼓勵且富有哲理的語氣回答，不超過 300 字。`;
+
+    try {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await resp.json();
+        resultDiv.innerText = data.candidates[0].content.parts[0].text;
+    } catch (e) {
+        resultDiv.innerText = "連線異常，請確認 API Key 是否正確或網路是否通暢。";
+    }
+}
+</script>
+</body>
+</html>
